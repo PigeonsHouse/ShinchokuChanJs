@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  guildId String @id
+  guildName String
+  notifyChannelId String?
+  joinings Joining[]
+}
+
+model User {
+  userId String @id
+  userName String
+  tasks Task[]
+  joinings Joining[]
+}
+
+model Joining {
+  guildId String
+  userId String
+  guild Guild @relation(fields: [guildId], references: [guildId], onUpdate: Cascade, onDelete: Cascade)
+  user User @relation(fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
+
+  @@id([guildId, userId])
+}
+
+model Task {
+  taskId Int @id @default(autoincrement())
+  taskName String
+  userId String
+  isReported Boolean @default(false)
+  duration Int @default(0) // ミリ秒単位
+  user User @relation(fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
+}

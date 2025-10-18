@@ -1,0 +1,36 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+  db:
+    image: postgres:18.0
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:8.2.2
+    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+    env_file:
+      - .env
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    profiles:
+      - tools
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+volumes:
+  db_data:

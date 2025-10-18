@@ -1,0 +1,17 @@
+FROM node:24-slim
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+RUN apt-get update -y && apt-get install -y openssl
+WORKDIR /app
+
+# 依存関係ファイルをコピー
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY prisma ./prisma/
+
+# 依存関係のインストールとPrisma生成
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm run prisma:generate
+
+# マイグレーション実行
+CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
