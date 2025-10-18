@@ -25,6 +25,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.migrate
+    volumes:
+      - ./prisma:/app/prisma:ro
     profiles:
       - tools
     env_file:
