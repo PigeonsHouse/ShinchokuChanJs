@@ -4,8 +4,8 @@ import {
   type ChatInputApplicationCommandData,
   CommandInteraction,
 } from "discord.js";
-import { addNewTask, getTaskByUserIdAndName, prepareGuildAndUser } from "../db";
-import { addUserTask, getUserTask } from "../redis";
+import db from "../db";
+import redis from "../redis";
 import { messages } from "../definitions";
 
 export const startTaskInfo: ChatInputApplicationCommandData = {
@@ -22,27 +22,27 @@ export const startTaskInfo: ChatInputApplicationCommandData = {
   ],
 };
 
-export const startTask = async (interaction: CommandInteraction) => {
+export const startTask = async (
+  interaction: CommandInteraction
+): Promise<string> => {
   // === Validation ===
   // 引数を受け取るのでChatInputCommandであることを保証
-  if (!interaction.isChatInputCommand()) return;
+  if (!interaction.isChatInputCommand()) return messages.startTask.noTaskName;
   // サーバー外(DMなど)では動作しないようにする
-  if (!interaction.guild) return;
+  if (!interaction.guild) return messages.common.denyDM;
   // 引数受け取り
   const taskName = interaction.options.getString(
     // 必須なのでnot-nullアサーションOK
     startTaskInfo.options![0]!.name
   );
   if (!taskName) {
-    await interaction.reply(messages.startTask.noTaskName);
-    return;
+    return messages.startTask.noTaskName;
   }
   if (taskName.length > 125) {
-    await interaction.reply(messages.startTask.taskNameTooLong);
-    return;
+    return messages.startTask.taskNameTooLong;
   }
   // redisの作業中リストに既にいたら弾く
-  const existingUserTask = await getUserTask(interaction.user.id);
+  const existingUserTask = await redis.getUserTask(interaction.user.id);
   if (existingUserTask) {
     const isSameTask = existingUserTask.taskName === taskName;
     let message: string;
@@ -51,23 +51,19 @@ export const startTask = async (interaction: CommandInteraction) => {
     } else {
       message = messages.startTask.alreadyDifferentTask;
     }
-    await interaction.reply(message);
-    return;
+    return message;
   }
   // VCに入っていなかったら弾く
   const userId = interaction.user.id;
-  console.log(`[DEBUG] Checking VC status for user: ${userId}`);
 
   const voiceState = await interaction.guild.voiceStates.fetch(userId);
   if (!voiceState.member) {
-    console.log(`[DEBUG] User ${userId} is not in VC - rejecting`);
-    await interaction.reply(messages.startTask.notInVC);
-    return;
+    return messages.startTask.notInVC;
   }
 
   // === Preparation ===
   // DBにユーザーとサーバーの情報がなければ追加
-  await prepareGuildAndUser(
+  await db.prepareGuildAndUser(
     interaction.guild.id,
     interaction.guild.name,
     userId,
@@ -76,17 +72,17 @@ export const startTask = async (interaction: CommandInteraction) => {
 
   // === Main Process ===
   // タスクがなければ新規作成、あればそれを使う
-  const existingTask = await getTaskByUserIdAndName(userId, taskName);
+  const existingTask = await db.getTaskByUserIdAndName(userId, taskName);
   let taskId: number;
   if (existingTask) {
     taskId = existingTask.taskId;
   } else {
-    const newTask = await addNewTask(userId, taskName);
+    const newTask = await db.addNewTask(userId, taskName);
     taskId = newTask.taskId;
   }
 
   // redisの作業中リストに追加
-  addUserTask(userId, {
+  redis.addUserTask(userId, {
     userName: interaction.user.username,
     startAt: Date.now(),
     taskId,
@@ -95,5 +91,5 @@ export const startTask = async (interaction: CommandInteraction) => {
   });
 
   // 返信
-  await interaction.reply(messages.startTask.start(taskName));
+  return messages.startTask.start(taskName);
 };

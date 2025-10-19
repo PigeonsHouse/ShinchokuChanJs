@@ -1,7 +1,10 @@
 import {
   ApplicationCommandType,
   ChatInputApplicationCommandData,
+  CommandInteraction,
 } from "discord.js";
+import { prepareGuild, setNotifyChannel } from "../db";
+import { messages } from "../definitions";
 
 export const setReportChannelInfo: ChatInputApplicationCommandData = {
   name: "set_report_channel",
@@ -9,4 +12,19 @@ export const setReportChannelInfo: ChatInputApplicationCommandData = {
   type: ApplicationCommandType.ChatInput,
 };
 
-export const setReportChannel = async () => {};
+export const setReportChannel = async (
+  interaction: CommandInteraction
+): Promise<string> => {
+  // === Validation ===
+  // サーバー外(DMなど)では動作しないようにする
+  if (!interaction.guild) return messages.common.denyDM;
+
+  // === Preparation ===
+  // DBにサーバーの情報がなければ追加
+  const guildId = interaction.guild.id;
+  await prepareGuild(guildId, interaction.guild.name);
+
+  // === Action ===
+  setNotifyChannel(guildId, interaction.channelId);
+  return messages.setReportChannel.set;
+};

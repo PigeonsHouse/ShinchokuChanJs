@@ -48,3 +48,9 @@ export const getUserTask = async (userId: string): Promise<UserTask | null> => {
 export const removeUserTask = async (userId: string) => {
   await redis.del(userId);
 };
+
+export default {
+  addUserTask,
+  getUserTask,
+  removeUserTask,
+};

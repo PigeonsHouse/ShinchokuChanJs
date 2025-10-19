@@ -1,6 +1,7 @@
 import {
   ApplicationCommandType,
   ChatInputApplicationCommandData,
+  CommandInteraction,
 } from "discord.js";
 
 export const restartTaskInfo: ChatInputApplicationCommandData = {
@@ -9,4 +10,8 @@ export const restartTaskInfo: ChatInputApplicationCommandData = {
   type: ApplicationCommandType.ChatInput,
 };
 
-export const restartTask = async () => {};
+export const restartTask = async (
+  interaction: CommandInteraction
+): Promise<string> => {
+  return "後で書く";
+};

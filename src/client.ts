@@ -9,18 +9,20 @@ import {
   restartTask,
   endTaskForCommand,
   endTaskForVoiceState,
+  scheduleReport,
 } from "./actions";
 
 export const client = new Client({ intents: ["Guilds", "GuildVoiceStates"] });
 
 client.once("clientReady", async () => {
   console.log("Bot is online!");
-  client.application?.commands.set([
+  await client.application?.commands.set([
     startTaskInfo,
     restartTaskInfo,
     endTaskInfo,
     setReportChannelInfo,
   ]);
+  await scheduleReport();
   // const guilds = await client.guilds.fetch();
   // guilds.forEach(async (guild) => {
   //   await registerCommands(guild.id);
@@ -37,7 +39,7 @@ client.on("voiceStateUpdate", (_, newState) => {
 
 const commandHandlers: Record<
   string,
-  (interaction: CommandInteraction) => Promise<void>
+  (interaction: CommandInteraction) => Promise<string>
 > = {
   [startTaskInfo.name]: startTask,
   [restartTaskInfo.name]: restartTask,
@@ -51,14 +53,15 @@ client.on("interactionCreate", async (interaction) => {
 
   const { commandName } = interaction;
   const handler = commandHandlers[commandName];
-  if (handler) await handler(interaction);
+  const message = handler ? await handler(interaction) : "後で書く";
+  interaction.reply(message);
 });
 
-export const registerCommands = async (guildId: string) => {
-  await client.rest.put(
-    Routes.applicationGuildCommands(process.env.APPLICATION_ID!, guildId),
-    {
-      body: [startTaskInfo, restartTaskInfo, endTaskInfo, setReportChannelInfo],
-    }
-  );
-};
+// export const registerCommands = async (guildId: string) => {
+//   await client.rest.put(
+//     Routes.applicationGuildCommands(process.env.APPLICATION_ID!, guildId),
+//     {
+//       body: [startTaskInfo, restartTaskInfo, endTaskInfo, setReportChannelInfo],
+//     }
+//   );
+// };

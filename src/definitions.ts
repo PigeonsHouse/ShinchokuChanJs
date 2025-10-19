@@ -1,4 +1,7 @@
 export const messages = {
+  common: {
+    denyDM: "DMでは使えないよ！サーバー内で使ってね！",
+  },
   startTask: {
     noTaskName: "タスク名を入力してね！",
     taskNameTooLong:
@@ -16,5 +19,8 @@ export const messages = {
     notInVC: "VCに入って終了宣言をしてね",
     finished: (taskName: string, duration: string) =>
       `お疲れ様！頑張ったね！\n【${taskName}】${duration}`,
+  },
+  setReportChannel: {
+    set: "月次報告をこのチャンネルでするね！",
   },
 };

@@ -97,18 +97,42 @@ export const updateTaskReported = async (taskId: number) =>
     data: { isReported: true },
   });
 
+export const prepareGuild = async (guildId: string, guildName: string) => {
+  const dbGuild = await getGuildById(guildId);
+  if (dbGuild === null) {
+    await addNewGuild(guildId, guildName);
+  }
+};
+
 export const prepareGuildAndUser = async (
   guildId: string,
   guildName: string,
   userId: string,
   userName: string
 ) => {
-  const dbGuild = await getGuildById(guildId);
-  if (dbGuild === null) {
-    await addNewGuild(guildId, guildName);
-  }
+  await prepareGuild(guildId, guildName);
   const dbUser = await getUserById(userId);
   if (dbUser === null) {
     await addNewUser(userId, userName);
   }
+};
+
+export default {
+  getGuildById,
+  addNewGuild,
+  getUserById,
+  addNewUser,
+  getJoining,
+  addNewJoining,
+  getTaskById,
+  getTaskByUserIdAndName,
+  addNewTask,
+  incrementTaskDuration,
+  setNotifyChannel,
+  getGuildList,
+  getJoiningUser,
+  getTaskList,
+  updateTaskReported,
+  prepareGuild,
+  prepareGuildAndUser,
 };
