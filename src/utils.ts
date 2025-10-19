@@ -11,3 +11,5 @@ export const convertDurationToString = (duration: number) => {
   const seconds = Math.floor((duration % 60_000) / 1_000);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 };
+
+export const mentionUser = (userId: string) => `<@!${userId}>`;

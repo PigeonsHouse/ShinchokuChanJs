@@ -23,4 +23,8 @@ export const messages = {
   setReportChannel: {
     set: "月次報告をこのチャンネルでするね！",
   },
+  report: {
+    startMessage:
+      "みんな今月もいっぱい頑張ったね！みんなの今月の進捗を報告するよ！",
+  },
 };

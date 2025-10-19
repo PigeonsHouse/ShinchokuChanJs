@@ -11,7 +11,7 @@ FROM base AS build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY prisma/schema.prisma ./prisma/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm run prisma:generate
+RUN pnpm exec prisma generate
 
 # ソースコードをコピーしてビルド
 COPY . .

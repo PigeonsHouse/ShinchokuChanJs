@@ -3,7 +3,7 @@ import {
   ChatInputApplicationCommandData,
   CommandInteraction,
 } from "discord.js";
-import { prepareGuild, setNotifyChannel } from "../db";
+import db from "../db";
 import { messages } from "../definitions";
 
 export const setReportChannelInfo: ChatInputApplicationCommandData = {
@@ -22,9 +22,9 @@ export const setReportChannel = async (
   // === Preparation ===
   // DBにサーバーの情報がなければ追加
   const guildId = interaction.guild.id;
-  await prepareGuild(guildId, interaction.guild.name);
+  await db.prepareGuild(guildId, interaction.guild.name);
 
   // === Action ===
-  setNotifyChannel(guildId, interaction.channelId);
+  db.setNotifyChannel(guildId, interaction.channelId);
   return messages.setReportChannel.set;
 };

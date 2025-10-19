@@ -32,10 +32,12 @@ model Joining {
 }
 
 model Task {
-  taskId Int @id @default(autoincrement())
+  taskId Int @default(autoincrement())
   taskName String
   userId String
   isReported Boolean @default(false)
   duration Int @default(0) // ミリ秒単位
   user User @relation(fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
+
+  @@id([taskId, isReported])
 }

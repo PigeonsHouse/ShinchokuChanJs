@@ -13,7 +13,7 @@
    ```
 3. マイグレーションファイルを生成
    ```bash
-   pnpm run prisma:generate
+   pnpm run prisma:migrate update_xxx_column
    ```
 
 ### マイグレーションの適用

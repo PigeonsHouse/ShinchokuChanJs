@@ -10,9 +10,12 @@ import {
   endTaskForCommand,
   endTaskForVoiceState,
   scheduleReport,
+  report,
 } from "./actions";
 
-export const client = new Client({ intents: ["Guilds", "GuildVoiceStates"] });
+export const client = new Client({
+  intents: ["Guilds", "GuildMessages", "GuildVoiceStates", "MessageContent"],
+});
 
 client.once("clientReady", async () => {
   console.log("Bot is online!");
@@ -22,7 +25,7 @@ client.once("clientReady", async () => {
     endTaskInfo,
     setReportChannelInfo,
   ]);
-  await scheduleReport();
+  await scheduleReport(client);
   // const guilds = await client.guilds.fetch();
   // guilds.forEach(async (guild) => {
   //   await registerCommands(guild.id);
@@ -55,6 +58,21 @@ client.on("interactionCreate", async (interaction) => {
   const handler = commandHandlers[commandName];
   const message = handler ? await handler(interaction) : "後で書く";
   interaction.reply(message);
+});
+
+client.on("messageCreate", async (message) => {
+  if (message.author.id !== process.env.OWNER_ID) return;
+  switch (message.content) {
+    case "ping":
+      message.reply("pong");
+      break;
+    case "debug_report":
+      await report(client);
+      message.reply("報告処理を実行しました");
+      break;
+    default:
+      break;
+  }
 });
 
 // export const registerCommands = async (guildId: string) => {

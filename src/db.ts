@@ -2,12 +2,12 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export const getGuildById = async (guildId: string) =>
+const getGuildById = async (guildId: string) =>
   prisma.guild.findUnique({
     where: { guildId },
   });
 
-export const addNewGuild = async (
+const addNewGuild = async (
   guildId: string,
   guildName: string,
   notifyChannelId?: string
@@ -20,42 +20,39 @@ export const addNewGuild = async (
     },
   });
 
-export const getUserById = async (userId: string) =>
+const getUserById = async (userId: string) =>
   prisma.user.findUnique({
     where: { userId },
   });
 
-export const addNewUser = async (userId: string, userName: string) =>
+const addNewUser = async (userId: string, userName: string) =>
   prisma.user.create({
     data: { userId, userName },
   });
 
-export const getJoining = async (userId: string, guildId: string) =>
+const getJoining = async (userId: string, guildId: string) =>
   prisma.joining.findUnique({
     where: {
       guildId_userId: { userId, guildId },
     },
   });
 
-export const addNewJoining = async (userId: string, guildId: string) =>
+const addNewJoining = async (userId: string, guildId: string) =>
   prisma.joining.create({
     data: { userId, guildId },
   });
 
-export const getTaskById = async (taskId: number) =>
+const getTaskById = async (taskId: number) =>
   prisma.task.findUnique({
-    where: { taskId, isReported: false },
+    where: { taskId_isReported: { taskId, isReported: false } },
   });
 
-export const getTaskByUserIdAndName = async (
-  userId: string,
-  taskName: string
-) =>
+const getTaskByUserIdAndName = async (userId: string, taskName: string) =>
   prisma.task.findFirst({
     where: { userId, taskName, isReported: false },
   });
 
-export const addNewTask = async (userId: string, taskName: string) => {
+const addNewTask = async (userId: string, taskName: string) => {
   const existingTask = await prisma.task.findFirst({
     where: { userId, taskName, isReported: false },
   });
@@ -65,65 +62,63 @@ export const addNewTask = async (userId: string, taskName: string) => {
   return await prisma.task.create({ data: { userId, taskName } });
 };
 
-export const incrementTaskDuration = async (taskId: number, duration: number) =>
+const incrementTaskDuration = async (taskId: number, duration: number) =>
   prisma.task.update({
-    where: { taskId, isReported: false },
+    where: { taskId_isReported: { taskId, isReported: false } },
     data: { duration: { increment: duration } },
   });
 
-export const setNotifyChannel = async (guildId: string, channelId: string) =>
+const setNotifyChannel = async (guildId: string, channelId: string) =>
   prisma.guild.update({
     where: { guildId },
     data: { notifyChannelId: channelId },
   });
 
-export const getGuildList = async () => prisma.guild.findMany();
+const getGuildList = async () => prisma.guild.findMany();
 
-export const getJoiningUser = async (guildId: string) =>
+const getJoiningUser = async (guildId: string) =>
   prisma.user.findMany({
     where: {
       joinings: { some: { guildId } },
     },
   });
 
-export const getTaskList = async (userId: string) =>
+const getTaskList = async (userId: string) =>
   prisma.task.findMany({
     where: { userId, isReported: false },
   });
 
-export const updateTaskReported = async (taskId: number) =>
-  prisma.task.update({
-    where: { taskId },
+const updateTasksReported = async () =>
+  prisma.task.updateMany({
     data: { isReported: true },
   });
 
-export const prepareGuild = async (guildId: string, guildName: string) => {
+const prepareGuild = async (guildId: string, guildName: string) => {
   const dbGuild = await getGuildById(guildId);
   if (dbGuild === null) {
     await addNewGuild(guildId, guildName);
   }
 };
 
-export const prepareGuildAndUser = async (
+const prepareGuildAndUser = async (
   guildId: string,
   guildName: string,
   userId: string,
   userName: string
 ) => {
   await prepareGuild(guildId, guildName);
+  const dbGuild = await getGuildById(guildId);
   const dbUser = await getUserById(userId);
   if (dbUser === null) {
     await addNewUser(userId, userName);
   }
+  const dbJoining = await getJoining(userId, guildId);
+  if (dbJoining === null && dbGuild !== null) {
+    await addNewJoining(userId, guildId);
+  }
 };
 
 export default {
-  getGuildById,
-  addNewGuild,
-  getUserById,
-  addNewUser,
-  getJoining,
-  addNewJoining,
   getTaskById,
   getTaskByUserIdAndName,
   addNewTask,
@@ -132,7 +127,7 @@ export default {
   getGuildList,
   getJoiningUser,
   getTaskList,
-  updateTaskReported,
+  updateTasksReported,
   prepareGuild,
   prepareGuildAndUser,
 };

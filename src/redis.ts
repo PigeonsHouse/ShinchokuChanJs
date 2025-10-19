@@ -26,11 +26,11 @@ const isUserTask = (obj: any): obj is UserTask => {
   );
 };
 
-export const addUserTask = async (userId: string, task: UserTask) => {
+const addUserTask = async (userId: string, task: UserTask) => {
   await redis.set(userId, JSON.stringify(task));
 };
 
-export const getUserTask = async (userId: string): Promise<UserTask | null> => {
+const getUserTask = async (userId: string): Promise<UserTask | null> => {
   const task = await redis.get(userId);
   if (!task) return null;
 
@@ -45,12 +45,34 @@ export const getUserTask = async (userId: string): Promise<UserTask | null> => {
   }
 };
 
-export const removeUserTask = async (userId: string) => {
+const removeUserTask = async (userId: string) => {
   await redis.del(userId);
+};
+
+const getAllUserTasks = async (): Promise<Record<string, UserTask>> => {
+  const keys = await redis.keys("*");
+  console.log(`[DEBUG] Found ${keys.length} keys in Redis`);
+  const result: Record<string, UserTask> = {};
+  for (const key of keys) {
+    const task = await getUserTask(key);
+    if (task) {
+      result[key] = task;
+    }
+  }
+  return result;
+};
+
+const updateUserTasksStartAt = async (userId: string, newStartAt: number) => {
+  const task = await getUserTask(userId);
+  if (!task) return;
+  task.startAt = newStartAt;
+  await addUserTask(userId, task);
 };
 
 export default {
   addUserTask,
   getUserTask,
   removeUserTask,
+  getAllUserTasks,
+  updateUserTasksStartAt,
 };
