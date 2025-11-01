@@ -62,6 +62,57 @@ const addNewTask = async (userId: string, taskName: string) => {
   return await prisma.task.create({ data: { userId, taskName } });
 };
 
+const addNewTasksBulk = async (
+  tasks: Array<{ userId: string; taskName: string }>
+) => {
+  // 既存タスクの重複チェック
+  const existingTasks = await prisma.task.findMany({
+    where: {
+      OR: tasks.map((task) => ({
+        userId: task.userId,
+        taskName: task.taskName,
+        isReported: false,
+      })),
+    },
+  });
+
+  if (existingTasks.length > 0) {
+    const duplicates = existingTasks
+      .map((t) => `${t.userId}:${t.taskName}`)
+      .join(", ");
+    throw new Error(
+      `Task(s) with the same name already exist for user(s): ${duplicates}`
+    );
+  }
+
+  // トランザクションで一括作成して取得
+  return await prisma.$transaction(async (tx) => {
+    // 一括作成
+    await tx.task.createMany({
+      data: tasks.map((task) => ({
+        userId: task.userId,
+        taskName: task.taskName,
+      })),
+    });
+
+    // 作成されたタスクを取得
+    const createdTasks = await tx.task.findMany({
+      where: {
+        OR: tasks.map((task) => ({
+          userId: task.userId,
+          taskName: task.taskName,
+          isReported: false,
+        })),
+      },
+      orderBy: {
+        taskId: "desc",
+      },
+    });
+
+    return createdTasks;
+  });
+};
+
 const incrementTaskDuration = async (taskId: number, duration: number) =>
   prisma.task.update({
     where: { taskId, isReported: false },
@@ -76,16 +127,19 @@ const setNotifyChannel = async (guildId: string, channelId: string) =>
 
 const getGuildList = async () => prisma.guild.findMany();
 
-const getJoiningUser = async (guildId: string) =>
-  prisma.user.findMany({
-    where: {
-      joinings: { some: { guildId } },
-    },
-  });
-
-const getTaskList = async (userId: string) =>
+const getTaskListByGuild = async (guildId: string) =>
   prisma.task.findMany({
-    where: { userId, isReported: false },
+    where: {
+      isReported: false,
+      user: {
+        joinings: {
+          some: { guildId },
+        },
+      },
+    },
+    include: {
+      user: true,
+    },
   });
 
 const updateTasksReported = async () =>
@@ -136,11 +190,11 @@ export default {
   getTaskById,
   getTaskByUserIdAndName,
   addNewTask,
+  addNewTasksBulk,
   incrementTaskDuration,
   setNotifyChannel,
   getGuildList,
-  getJoiningUser,
-  getTaskList,
+  getTaskListByGuild,
   updateTasksReported,
   prepareGuild,
   prepareGuildAndUser,

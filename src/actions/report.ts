@@ -62,19 +62,27 @@ export const report = async (client: Client) => {
 
     // 報告メッセージの作成
     let reportMessage = "";
-    const joiningUserList = await db.getJoiningUser(guild.guildId);
+    // ギルド全体のタスクを一括取得（ユーザー情報も含む）
+    const allTasksInGuild = await db.getTaskListByGuild(guild.guildId);
     console.log(
-      `[DEBUG] ギルド ${guild.guildId} に ${joiningUserList.length}人のユーザーを検出`
+      `[DEBUG] ギルド ${guild.guildId} で ${allTasksInGuild.length}個のタスクを検出`
     );
 
-    for (const joining of joiningUserList) {
-      const userId = joining.userId;
-      // TODO: n+1なので修正したい
-      const taskList = await db.getTaskList(userId);
+    // ユーザーごとにグループ化
+    const tasksByUser = new Map<string, typeof allTasksInGuild>();
+    for (const task of allTasksInGuild) {
+      const userId = task.userId;
+      if (!tasksByUser.has(userId)) {
+        tasksByUser.set(userId, []);
+      }
+      tasksByUser.get(userId)!.push(task);
+    }
+
+    // ユーザーごとにレポートメッセージを生成
+    for (const [userId, taskList] of tasksByUser) {
       console.log(
         `[DEBUG] ユーザー ${userId} は ${taskList.length}個のタスクを保有`
       );
-      if (taskList.length <= 0) continue;
       reportMessage += `${mentionUser(userId)}さん\n`;
       // タスク一覧から以下のようなフォーマットのタスク情報のメッセージに変換
       // 【ゲーム開発】1:34:45
@@ -104,17 +112,29 @@ export const report = async (client: Client) => {
   await db.updateTasksReported();
 
   console.log("[DEBUG] 次の期間用の新しいタスクを作成中");
-  for (const [userId, userTask] of Object.entries(allUserTasks)) {
-    // TODO: n+1になっている
-    console.log(
-      `[DEBUG] ユーザー ${userTask.userName} のタスク開始時刻を更新して新しいタスクを作成中`
-    );
-    const newTask = await db.addNewTask(userId, userTask.taskName);
-    await redis.addUserTask(userId, {
-      ...userTask,
-      taskId: newTask.taskId,
-      startAt: now,
-    });
+  // 一括でタスクを作成
+  const tasksToCreate = Object.entries(allUserTasks).map(
+    ([userId, userTask]) => ({
+      userId,
+      taskName: userTask.taskName,
+    })
+  );
+
+  if (tasksToCreate.length > 0) {
+    const createdTasks = await db.addNewTasksBulk(tasksToCreate);
+
+    // 作成されたタスクをRedisに反映
+    for (const createdTask of createdTasks) {
+      const userTask = allUserTasks[createdTask.userId];
+      console.log(
+        `[DEBUG] ユーザー ${userTask.userName} のタスク開始時刻を更新して新しいタスクを作成中`
+      );
+      await redis.addUserTask(createdTask.userId, {
+        ...userTask,
+        taskId: createdTask.taskId,
+        startAt: now,
+      });
+    }
   }
 
   console.log("[DEBUG] 月次レポートの生成が完了");
