@@ -9,7 +9,7 @@
     "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=build/main.js --packages=external",
     "format": "prettier --write src/**/*.ts",
     "lint": "eslint src/**/*.ts",
-    "prisma:migrate": "dotenv -e .env -e .env.local prisma migrate dev --name"
+    "prisma:migrate": "dotenv -e .env.local -e .env prisma migrate dev --name"
   },
   "keywords": [],
   "author": "",

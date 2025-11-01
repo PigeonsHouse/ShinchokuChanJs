@@ -44,7 +44,7 @@ const addNewJoining = async (userId: string, guildId: string) =>
 
 const getTaskById = async (taskId: number) =>
   prisma.task.findUnique({
-    where: { taskId_isReported: { taskId, isReported: false } },
+    where: { taskId, isReported: false },
   });
 
 const getTaskByUserIdAndName = async (userId: string, taskName: string) =>
@@ -64,7 +64,7 @@ const addNewTask = async (userId: string, taskName: string) => {
 
 const incrementTaskDuration = async (taskId: number, duration: number) =>
   prisma.task.update({
-    where: { taskId_isReported: { taskId, isReported: false } },
+    where: { taskId, isReported: false },
     data: { duration: { increment: duration } },
   });
 
@@ -118,6 +118,20 @@ const prepareGuildAndUser = async (
   }
 };
 
+const setLastTaskId = async (userId: string, taskId: number) =>
+  prisma.user.update({
+    where: { userId },
+    data: { lastTaskId: taskId },
+  });
+
+const getLastTask = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { userId },
+    include: { lastTask: true },
+  });
+  return user?.lastTask ?? null;
+};
+
 export default {
   getTaskById,
   getTaskByUserIdAndName,
@@ -130,4 +144,6 @@ export default {
   updateTasksReported,
   prepareGuild,
   prepareGuildAndUser,
+  setLastTaskId,
+  getLastTask,
 };

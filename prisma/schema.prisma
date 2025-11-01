@@ -13,13 +13,19 @@ model Guild {
   guildName String
   notifyChannelId String?
   joinings Joining[]
+
+  @@map("guilds")
 }
 
 model User {
   userId String @id
   userName String
-  tasks Task[]
+  lastTaskId Int? @unique
+  lastTask Task? @relation("LastTask", fields: [lastTaskId], references: [taskId], onDelete: SetNull, onUpdate: Cascade)
+  tasks Task[] @relation("UserTasks")
   joinings Joining[]
+
+  @@map("users")
 }
 
 model Joining {
@@ -29,15 +35,17 @@ model Joining {
   user User @relation(fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
 
   @@id([guildId, userId])
+  @@map("joinings")
 }
 
 model Task {
-  taskId Int @default(autoincrement())
+  taskId Int @id @default(autoincrement())
   taskName String
   userId String
   isReported Boolean @default(false)
   duration Int @default(0) // ミリ秒単位
-  user User @relation(fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
+  user User @relation("UserTasks", fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
+  lastTaskUser User? @relation("LastTask")
 
-  @@id([taskId, isReported])
+  @@map("tasks")
 }

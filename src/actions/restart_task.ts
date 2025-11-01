@@ -3,6 +3,9 @@ import {
   ChatInputApplicationCommandData,
   CommandInteraction,
 } from "discord.js";
+import db from "../db";
+import redis from "../redis";
+import { messages } from "../definitions";
 
 export const restartTaskInfo: ChatInputApplicationCommandData = {
   name: "restart_task",
@@ -13,5 +16,64 @@ export const restartTaskInfo: ChatInputApplicationCommandData = {
 export const restartTask = async (
   interaction: CommandInteraction
 ): Promise<string> => {
-  return "後で書く";
+  // === Validation ===
+  // サーバー外(DMなど)では動作しないようにする
+  if (!interaction.guild) return messages.common.denyDM;
+
+  // redisの作業中リストに既にいたら弾く
+  const existingUserTask = await redis.getUserTask(interaction.user.id);
+  if (existingUserTask) {
+    return "既にタスクを実行中だよ！\n一度終了してから再開してね！";
+  }
+
+  // VCに入っていなかったら弾く
+  const userId = interaction.user.id;
+  const voiceState = await interaction.guild.voiceStates.fetch(userId);
+  if (!voiceState.member) {
+    return "VCに入ってからタスクを再開してね！";
+  }
+
+  // 直近タスクを取得
+  const lastTask = await db.getLastTask(userId);
+  if (!lastTask) {
+    return "前回のタスクがないよ！\n新しくタスクを始めてね！";
+  }
+
+  // === Preparation ===
+  // DBにユーザーとサーバーの情報がなければ追加
+  await db.prepareGuildAndUser(
+    interaction.guild.id,
+    interaction.guild.name,
+    userId,
+    interaction.user.username
+  );
+
+  // === Main Process ===
+  // 報告済みの場合は同じ名前で新規タスクを作成
+  let taskId: number;
+  const taskName = lastTask.taskName;
+
+  if (lastTask.isReported) {
+    const existingTask = await db.getTaskByUserIdAndName(userId, taskName);
+    if (existingTask) {
+      taskId = existingTask.taskId;
+    } else {
+      const newTask = await db.addNewTask(userId, taskName);
+      taskId = newTask.taskId;
+    }
+  } else {
+    taskId = lastTask.taskId;
+  }
+
+  // redisの作業中リストに追加
+  redis.addUserTask(userId, {
+    userName: interaction.user.username,
+    startAt: Date.now(),
+    taskId,
+    taskName,
+    replyChannelId: interaction.channelId,
+  });
+
+  // 返信
+  return `【${taskName}】を再開するよ！\n引き続き頑張ろう！`;
 };

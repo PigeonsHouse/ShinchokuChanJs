@@ -76,6 +76,7 @@ const endTask = async ({
   // === Main Process ===
   const duration = Date.now() - existingUserTask.startAt;
   await db.incrementTaskDuration(existingUserTask.taskId, duration);
+  await db.setLastTaskId(user.id, existingUserTask.taskId);
   await redis.removeUserTask(user.id);
   const taskName = existingUserTask.taskName;
   const durationString = convertDurationToString(duration);
