@@ -55,10 +55,9 @@ export const startTask = async (
   }
   // VCに入っていなかったら弾く
   const userId = interaction.user.id;
-
   const voiceState = await interaction.guild.voiceStates.fetch(userId);
   if (!voiceState.member) {
-    return messages.startTask.notInVC;
+    return messages.common.notInVC;
   }
 
   // === Preparation ===

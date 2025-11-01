@@ -19,24 +19,21 @@ export const restartTask = async (
   // === Validation ===
   // サーバー外(DMなど)では動作しないようにする
   if (!interaction.guild) return messages.common.denyDM;
-
   // redisの作業中リストに既にいたら弾く
   const existingUserTask = await redis.getUserTask(interaction.user.id);
   if (existingUserTask) {
-    return "既にタスクを実行中だよ！\n一度終了してから再開してね！";
+    return messages.restartTask.alreadySameTask(existingUserTask.taskName);
   }
-
   // VCに入っていなかったら弾く
   const userId = interaction.user.id;
   const voiceState = await interaction.guild.voiceStates.fetch(userId);
   if (!voiceState.member) {
-    return "VCに入ってからタスクを再開してね！";
+    return messages.common.notInVC;
   }
-
   // 直近タスクを取得
   const lastTask = await db.getLastTask(userId);
   if (!lastTask) {
-    return "前回のタスクがないよ！\n新しくタスクを始めてね！";
+    return messages.restartTask.noTask;
   }
 
   // === Preparation ===
@@ -75,5 +72,5 @@ export const restartTask = async (
   });
 
   // 返信
-  return `【${taskName}】を再開するよ！\n引き続き頑張ろう！`;
+  return messages.restartTask.restart(taskName);
 };

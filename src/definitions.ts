@@ -1,6 +1,7 @@
 export const messages = {
   common: {
     denyDM: "DMでは使えないよ！サーバー内で使ってね！",
+    notInVC: "VCに入ってから作業を始めてね！",
   },
   startTask: {
     noTaskName: "タスク名を入力してね！",
@@ -10,8 +11,15 @@ export const messages = {
       `${taskName}をしてるのはちゃんと見てるよ？\n応援してるよ！頑張ってね！`,
     alreadyDifferentTask:
       "作業を変更するときは一度終了してからもう一度宣言してね！",
-    notInVC: "VCに入ってから作業を始めてね！",
     start: (taskName: string) => `${taskName}をやるんだね！\n今日も頑張ろう！`,
+  },
+  restartTask: {
+    noTask:
+      "再開するタスクが見つからないよ？\n`/start_task`で新しく作業を始めてね！",
+    alreadySameTask: (taskName: string) =>
+      `${taskName}をしてるのはちゃんと見てるよ？\n応援してるよ！頑張ってね！`,
+    restart: (taskName: string) =>
+      `${taskName}を再開するんだね！\n今日も頑張ろう！`,
   },
   endTask: {
     noWatchingTask:
