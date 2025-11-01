@@ -48,7 +48,7 @@ export const endTaskForCommand = async (
   // コマンド実行時、VCに入っていなかったら弾く
   const member = await interaction.guild.members.fetch(userId);
   if (member.voice.channel === null) {
-    return messages.endTask.notInVC;
+    return messages.common.notInVC;
   }
 
   return await endTask({
