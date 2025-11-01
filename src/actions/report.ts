@@ -11,28 +11,28 @@ export const scheduleReport = async (client: Client) => {
 };
 
 export const report = async (client: Client) => {
-  console.log("[DEBUG] Starting monthly report generation");
+  console.log("[DEBUG] 月次レポートの生成を開始");
   const now = Date.now();
 
   const allUserTasks = await redis.getAllUserTasks();
   console.log(
-    `[DEBUG] Found ${Object.keys(allUserTasks).length} active user tasks`
+    `[DEBUG] ${Object.keys(allUserTasks).length}件のアクティブなユーザータスクを検出`
   );
 
   for (const [, userTask] of Object.entries(allUserTasks)) {
     const duration = now - userTask.startAt;
     console.log(
-      `[DEBUG] Updating task: ${userTask.taskName} for user: ${userTask.userName}, duration: ${duration}ms`
+      `[DEBUG] タスクを更新: ${userTask.taskName} (ユーザー: ${userTask.userName}, 経過時間: ${duration}ms)`
     );
     db.incrementTaskDuration(userTask.taskId, duration);
   }
 
   // ここで各ギルドの報告チャンネルに報告を送る処理を書く
   const guild_list = await db.getGuildList();
-  console.log(`[DEBUG] Processing ${guild_list.length} guilds`);
+  console.log(`[DEBUG] ${guild_list.length}個のギルドを処理中`);
 
   for (const guild of guild_list) {
-    console.log(`[DEBUG] Processing guild: ${guild.guildId}`);
+    console.log(`[DEBUG] ギルドを処理中: ${guild.guildId}`);
     // 進捗ちゃんが参加しているサーバーの報告用チャンネルを取得
     let notifyChannelId: string | null = guild.notifyChannelId;
     if (!guild.notifyChannelId) {
@@ -40,13 +40,13 @@ export const report = async (client: Client) => {
       notifyChannelId =
         client.guilds.cache.get(guild.guildId)?.systemChannelId || null;
       console.log(
-        `[DEBUG] No notify channel set, using system channel: ${notifyChannelId}`
+        `[DEBUG] 通知チャンネルが未設定のため、システムチャンネルを使用: ${notifyChannelId}`
       );
     }
     // それでも報告チャンネルがなければスキップ
     if (!notifyChannelId) {
       console.log(
-        `[DEBUG] No notify channel found for guild ${guild.guildId}, skipping`
+        `[DEBUG] ギルド ${guild.guildId} の通知チャンネルが見つからないためスキップ`
       );
       continue;
     }
@@ -54,24 +54,26 @@ export const report = async (client: Client) => {
     const notifyChannel = await client.channels.fetch(notifyChannelId);
     if (!notifyChannel || !notifyChannel.isSendable()) {
       console.log(
-        `[DEBUG] Channel ${notifyChannelId} is not sendable, skipping`
+        `[DEBUG] チャンネル ${notifyChannelId} にメッセージを送信できないためスキップ`
       );
       continue;
     }
-    console.log(`[DEBUG] Using notify channel: ${notifyChannelId}`);
+    console.log(`[DEBUG] 通知チャンネルを使用: ${notifyChannelId}`);
 
     // 報告メッセージの作成
     let reportMessage = "";
     const joiningUserList = await db.getJoiningUser(guild.guildId);
     console.log(
-      `[DEBUG] Found ${joiningUserList.length} users in guild ${guild.guildId}`
+      `[DEBUG] ギルド ${guild.guildId} に ${joiningUserList.length}人のユーザーを検出`
     );
 
     for (const joining of joiningUserList) {
       const userId = joining.userId;
       // TODO: n+1なので修正したい
       const taskList = await db.getTaskList(userId);
-      console.log(`[DEBUG] User ${userId} has ${taskList.length} tasks`);
+      console.log(
+        `[DEBUG] ユーザー ${userId} は ${taskList.length}個のタスクを保有`
+      );
       if (taskList.length <= 0) continue;
       reportMessage += `${mentionUser(userId)}さん\n`;
       // タスク一覧から以下のようなフォーマットのタスク情報のメッセージに変換
@@ -87,29 +89,33 @@ export const report = async (client: Client) => {
     reportMessage = reportMessage.trim();
     if (reportMessage.length > 0) {
       console.log(
-        `[DEBUG] Sending report message to channel ${notifyChannelId}`
+        `[DEBUG] チャンネル ${notifyChannelId} にレポートメッセージを送信中`
       );
       notifyChannel.send(messages.report.startMessage);
       notifyChannel.send(reportMessage);
     } else {
       console.log(
-        `[DEBUG] No report message to send for guild ${guild.guildId}`
+        `[DEBUG] ギルド ${guild.guildId} に送信するレポートメッセージがありません`
       );
     }
   }
 
-  console.log("[DEBUG] Updating tasks as reported");
+  console.log("[DEBUG] タスクを報告済みとして更新中");
   await db.updateTasksReported();
 
-  console.log("[DEBUG] Creating new tasks for next period");
-  for (const [, userTask] of Object.entries(allUserTasks)) {
+  console.log("[DEBUG] 次の期間用の新しいタスクを作成中");
+  for (const [userId, userTask] of Object.entries(allUserTasks)) {
     // TODO: n+1になっている
     console.log(
-      `[DEBUG] Updating task start time and creating new task for user: ${userTask.userName}`
+      `[DEBUG] ユーザー ${userTask.userName} のタスク開始時刻を更新して新しいタスクを作成中`
     );
-    redis.updateUserTasksStartAt(userTask.userName, now);
-    db.addNewTask(userTask.userName, userTask.taskName);
+    const newTask = await db.addNewTask(userId, userTask.taskName);
+    await redis.addUserTask(userId, {
+      ...userTask,
+      taskId: newTask.taskId,
+      startAt: now,
+    });
   }
 
-  console.log("[DEBUG] Monthly report generation completed");
+  console.log("[DEBUG] 月次レポートの生成が完了");
 };
