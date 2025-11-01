@@ -7,14 +7,11 @@
 データベーススキーマを変更する際の手順です。
 
 1. `prisma/schema.prisma`を編集してスキーマを変更
-2. データベースコンテナが起動していることを確認
+2. マイグレーションファイルを生成
    ```bash
-   docker compose up -d db
+   docker compose run --rm migrate-dev <migration_name>
    ```
-3. マイグレーションファイルを生成
-   ```bash
-   pnpm run prisma:migrate update_xxx_column
-   ```
+   例: `docker compose run --rm migrate-dev update_xxx_column`
 
 ### マイグレーションの適用
 
@@ -30,4 +27,3 @@ docker compose run --rm migrate
 
 - マイグレーションファイルは`prisma/migrations/`ディレクトリに生成されます
 - 生成されたマイグレーションファイルは必ずGitにコミットしてください
-- ローカル開発環境では`.env.local`を使用して`localhost`のデータベースに接続します

@@ -14,8 +14,6 @@ services:
       - .env
     volumes:
       - db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
   redis:
     image: redis:8.2.2
     command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
@@ -33,6 +31,19 @@ services:
       - .env
     depends_on:
       - db
+  migrate-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    volumes:
+      - ./prisma:/app/prisma
+    profiles:
+      - tools
+    env_file:
+      - .env
+    depends_on:
+      - db
+    entrypoint: ["pnpm", "exec", "prisma", "migrate", "dev", "--name"]
 
 volumes:
   db_data:

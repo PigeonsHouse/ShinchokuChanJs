@@ -8,8 +8,7 @@
     "start": "tsx src/main.ts",
     "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=build/main.js --packages=external",
     "format": "prettier --write src/**/*.ts",
-    "lint": "eslint src/**/*.ts",
-    "prisma:migrate": "dotenv -e .env.local -e .env prisma migrate dev --name"
+    "lint": "eslint src/**/*.ts"
   },
   "keywords": [],
   "author": "",
@@ -25,7 +24,6 @@
   },
   "devDependencies": {
     "@types/node": "^24.7.0",
-    "dotenv-cli": "^10.0.0",
     "esbuild": "^0.25.10",
     "eslint": "^9.37.0",
     "prettier": "^3.6.2",
