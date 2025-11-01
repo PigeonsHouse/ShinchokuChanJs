@@ -1,8 +1,8 @@
+import { Client } from "discord.js";
 import cron from "node-cron";
 import db from "../db";
-import redis from "../redis";
-import { Client } from "discord.js";
 import { messages } from "../definitions";
+import redis from "../redis";
 import { convertDurationToString, mentionUser } from "../utils";
 
 export const scheduleReport = async (client: Client) => {

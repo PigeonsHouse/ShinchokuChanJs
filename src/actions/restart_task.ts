@@ -4,8 +4,8 @@ import {
   CommandInteraction,
 } from "discord.js";
 import db from "../db";
-import redis from "../redis";
 import { messages } from "../definitions";
+import redis from "../redis";
 
 export const restartTaskInfo: ChatInputApplicationCommandData = {
   name: "restart_task",

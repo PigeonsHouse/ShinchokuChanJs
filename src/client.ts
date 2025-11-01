@@ -1,16 +1,16 @@
-import { Client, CommandInteraction, Routes } from "discord.js";
+import { Client, CommandInteraction } from "discord.js";
 import {
-  endTaskInfo,
-  startTask,
-  startTaskInfo,
-  setReportChannel,
-  setReportChannelInfo,
-  restartTaskInfo,
-  restartTask,
   endTaskForCommand,
   endTaskForVoiceState,
-  scheduleReport,
+  endTaskInfo,
   report,
+  restartTask,
+  restartTaskInfo,
+  setReportChannel,
+  setReportChannelInfo,
+  scheduleReport,
+  startTask,
+  startTaskInfo,
 } from "./actions";
 
 export const client = new Client({
@@ -26,10 +26,6 @@ client.once("clientReady", async () => {
     setReportChannelInfo,
   ]);
   await scheduleReport(client);
-  // const guilds = await client.guilds.fetch();
-  // guilds.forEach(async (guild) => {
-  //   await registerCommands(guild.id);
-  // });
 });
 
 client.on("voiceStateUpdate", (_, newState) => {
@@ -74,12 +70,3 @@ client.on("messageCreate", async (message) => {
       break;
   }
 });
-
-// export const registerCommands = async (guildId: string) => {
-//   await client.rest.put(
-//     Routes.applicationGuildCommands(process.env.APPLICATION_ID!, guildId),
-//     {
-//       body: [startTaskInfo, restartTaskInfo, endTaskInfo, setReportChannelInfo],
-//     }
-//   );
-// };

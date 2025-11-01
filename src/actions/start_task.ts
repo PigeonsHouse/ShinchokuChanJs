@@ -1,12 +1,12 @@
 import {
   ApplicationCommandOptionType,
   ApplicationCommandType,
-  type ChatInputApplicationCommandData,
   CommandInteraction,
+  type ChatInputApplicationCommandData,
 } from "discord.js";
 import db from "../db";
-import redis from "../redis";
 import { messages } from "../definitions";
+import redis from "../redis";
 
 export const startTaskInfo: ChatInputApplicationCommandData = {
   name: "start_task",
