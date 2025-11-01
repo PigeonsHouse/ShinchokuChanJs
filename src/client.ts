@@ -56,6 +56,7 @@ client.on("interactionCreate", async (interaction) => {
   interaction.reply(message);
 });
 
+// デバッグ用コマンド処理
 client.on("messageCreate", async (message) => {
   if (message.author.id !== process.env.OWNER_ID) return;
   switch (message.content) {

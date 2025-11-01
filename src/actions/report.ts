@@ -11,64 +11,43 @@ export const scheduleReport = async (client: Client) => {
 };
 
 export const report = async (client: Client) => {
-  console.log("[DEBUG] 月次レポートの生成を開始");
+  // 報告中に作業中のユーザがいた場合の一時終了時刻と再開時刻の調整のための現在時刻
   const now = Date.now();
 
+  // 作業中ユーザのタスク時間をDBに反映
   const allUserTasks = await redis.getAllUserTasks();
-  console.log(
-    `[DEBUG] ${Object.keys(allUserTasks).length}件のアクティブなユーザータスクを検出`
-  );
-
   for (const [, userTask] of Object.entries(allUserTasks)) {
     const duration = now - userTask.startAt;
-    console.log(
-      `[DEBUG] タスクを更新: ${userTask.taskName} (ユーザー: ${userTask.userName}, 経過時間: ${duration}ms)`
-    );
     db.incrementTaskDuration(userTask.taskId, duration);
   }
 
-  // ここで各ギルドの報告チャンネルに報告を送る処理を書く
+  // 各ギルドの報告チャンネルに報告を送る
   const guild_list = await db.getGuildList();
-  console.log(`[DEBUG] ${guild_list.length}個のギルドを処理中`);
-
   for (const guild of guild_list) {
-    console.log(`[DEBUG] ギルドを処理中: ${guild.guildId}`);
     // 進捗ちゃんが参加しているサーバーの報告用チャンネルを取得
     let notifyChannelId: string | null = guild.notifyChannelId;
     if (!guild.notifyChannelId) {
       // DBに保存されていない場合はシステムチャンネルを使う
       notifyChannelId =
         client.guilds.cache.get(guild.guildId)?.systemChannelId || null;
-      console.log(
-        `[DEBUG] 通知チャンネルが未設定のため、システムチャンネルを使用: ${notifyChannelId}`
-      );
     }
     // それでも報告チャンネルがなければスキップ
     if (!notifyChannelId) {
-      console.log(
-        `[DEBUG] ギルド ${guild.guildId} の通知チャンネルが見つからないためスキップ`
-      );
       continue;
     }
     // メッセージを送れるチャンネルが存在するか確認
     const notifyChannel = await client.channels.fetch(notifyChannelId);
     if (!notifyChannel || !notifyChannel.isSendable()) {
-      console.log(
-        `[DEBUG] チャンネル ${notifyChannelId} にメッセージを送信できないためスキップ`
-      );
       continue;
     }
-    console.log(`[DEBUG] 通知チャンネルを使用: ${notifyChannelId}`);
 
     // 報告メッセージの作成
     let reportMessage = "";
     // ギルド全体のタスクを一括取得（ユーザー情報も含む）
     const allTasksInGuild = await db.getTaskListByGuild(guild.guildId);
-    console.log(
-      `[DEBUG] ギルド ${guild.guildId} で ${allTasksInGuild.length}個のタスクを検出`
-    );
 
     // ユーザーごとにグループ化
+    // keyがユーザーID、valueがそのユーザーのタスクの配列になっているハッシュマップ
     const tasksByUser = new Map<string, typeof allTasksInGuild>();
     for (const task of allTasksInGuild) {
       const userId = task.userId;
@@ -80,9 +59,6 @@ export const report = async (client: Client) => {
 
     // ユーザーごとにレポートメッセージを生成
     for (const [userId, taskList] of tasksByUser) {
-      console.log(
-        `[DEBUG] ユーザー ${userId} は ${taskList.length}個のタスクを保有`
-      );
       reportMessage += `${mentionUser(userId)}さん\n`;
       // タスク一覧から以下のようなフォーマットのタスク情報のメッセージに変換
       // 【ゲーム開発】1:34:45
@@ -96,39 +72,26 @@ export const report = async (client: Client) => {
     // 末尾に改行がついているはずなので、stripで安全に落とす
     reportMessage = reportMessage.trim();
     if (reportMessage.length > 0) {
-      console.log(
-        `[DEBUG] チャンネル ${notifyChannelId} にレポートメッセージを送信中`
-      );
       notifyChannel.send(messages.report.startMessage);
       notifyChannel.send(reportMessage);
-    } else {
-      console.log(
-        `[DEBUG] ギルド ${guild.guildId} に送信するレポートメッセージがありません`
-      );
     }
   }
 
-  console.log("[DEBUG] タスクを報告済みとして更新中");
+  // 報告を終えたのでTask.isReportedをtrueに更新
   await db.updateTasksReported();
 
-  console.log("[DEBUG] 次の期間用の新しいタスクを作成中");
-  // 一括でタスクを作成
+  // 作業中ユーザのタスクも完了しているので、新しいタスクを一括で作成
   const tasksToCreate = Object.entries(allUserTasks).map(
     ([userId, userTask]) => ({
       userId,
       taskName: userTask.taskName,
     })
   );
-
   if (tasksToCreate.length > 0) {
     const createdTasks = await db.addNewTasksBulk(tasksToCreate);
-
     // 作成されたタスクをRedisに反映
     for (const createdTask of createdTasks) {
       const userTask = allUserTasks[createdTask.userId];
-      console.log(
-        `[DEBUG] ユーザー ${userTask.userName} のタスク開始時刻を更新して新しいタスクを作成中`
-      );
       await redis.addUserTask(createdTask.userId, {
         ...userTask,
         taskId: createdTask.taskId,
@@ -136,6 +99,4 @@ export const report = async (client: Client) => {
       });
     }
   }
-
-  console.log("[DEBUG] 月次レポートの生成が完了");
 };
